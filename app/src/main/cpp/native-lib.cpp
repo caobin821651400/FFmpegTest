@@ -2,6 +2,13 @@
 #include <string>
 #include "EnjoyPlayer.h"
 
+
+JavaVM *javaVM = 0;
+JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved){
+    javaVM = vm;
+    return JNI_VERSION_1_4;
+};
+
 /**
  * 实现native与java层简历关联
  */
@@ -9,7 +16,7 @@ extern "C"
 JNIEXPORT jlong JNICALL
 Java_com_example_ffmpeg_EnjoyPlayer_nativeInit(JNIEnv *env, jobject thiz) {
 
-    EnjoyPlayer *player = new EnjoyPlayer();
+    EnjoyPlayer *player = new EnjoyPlayer(new JavaCallHelper(javaVM,env,thiz));
     //指针回传给java
     return reinterpret_cast<jlong>(player);
 }

@@ -19,8 +19,9 @@ void *prepare_t(void *args) {
 
 /**
  * 构造函数
+ * : helper(helper）初始化helper的值
  */
-EnjoyPlayer::EnjoyPlayer() {
+EnjoyPlayer::EnjoyPlayer(JavaCallHelper *helper) : helper(helper) {
     //初始化网络
     avformat_network_init();
 }
@@ -48,15 +49,71 @@ void EnjoyPlayer::prepare() {
  */
 void EnjoyPlayer::_prepare() {
     AVFormatContext *avFormatContext = avformat_alloc_context();
-    //参数3 输入文件的格式
-    //参数4 map集合
+    /**
+     * 1.打开媒体文件
+     */
+    //参数3 输入文件的格式 参数4 map集合
     AVDictionary *opts;
     av_dict_set(&opts, "timeout", "3000000", 0);
     int ret = avformat_open_input(&avFormatContext, path, 0, &opts);
 
     if (ret != 0) {
         LOGI("打开%s 失败 code:%d msg:%s", path, ret, av_err2str(ret));
+        helper->onError(CAN_NOT_OPEN_URL, THREAD_CHILD);
         return;
+    }
+
+    /**
+     * 2.查找媒体流
+     */
+    ret = avformat_find_stream_info(avFormatContext, 0);
+
+    if (ret < 0) {
+        LOGE("查找媒体流 %s 失败，返回:%d 错误描述:%s", path, ret, av_err2str(ret));
+        helper->onError(CAN_NOT_FIND_STREAMS, THREAD_CHILD);
+        return;
+    }
+    //时长
+    duration = avFormatContext->duration / AV_TIME_BASE;
+    //读取流（视频流、音频流）
+    for (int i = 0; i < avFormatContext->nb_streams; ++i) {
+        AVStream *avStream = avFormatContext->streams[i];
+        //AVStream包含解码信息
+        AVCodecParameters *parameters = avStream->codecpar;
+        //查找解码器，找不到说明不知此这种格式
+        AVCodec *dec = avcodec_find_decoder(parameters->codec_id);
+        if (!dec) {
+            LOGI("找不到解码器");
+            helper->onError(FIND_DECODER_FALL, THREAD_CHILD);
+            return;
+        }
+
+        //打开解码器 解码器上下文
+        AVCodecContext *avCodecContext = avcodec_alloc_context3(dec);
+        //媒体信息 赋值给解码器的上下文
+        if (!avCodecContext && avcodec_parameters_to_context(avCodecContext, parameters) < 0) {
+            LOGI("赋值给解码器的上下文失败");
+            helper->onError(ALLOC_CODEC_CONTEXT_FAIL, THREAD_CHILD);
+            return;
+        }
+
+        //打开解码器 也可以理解为初始化解码器
+        if (avcodec_open2(avCodecContext, dec, 0) != 0) {
+            LOGI("解码器初始化失败");
+            helper->onError(OPEN_DECODER_FAIL, THREAD_CHILD);
+            return;
+        }
+
+        //判断音频还是视频
+        if (parameters->codec_type == AVMEDIA_TYPE_AUDIO) {
+
+        } else if (parameters->codec_type == AVMEDIA_TYPE_VIDEO) {
+            //视频
+            int pfs = av_q2d(avStream->avg_frame_rate);
+        } else {
+
+        }
+
     }
 
 }
