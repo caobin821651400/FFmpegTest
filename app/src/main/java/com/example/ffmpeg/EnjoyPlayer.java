@@ -38,7 +38,7 @@ public class EnjoyPlayer {
      * 开始播放
      */
     public void start() {
-
+        start(nativeHandle);
     }
 
     /**
@@ -112,4 +112,6 @@ public class EnjoyPlayer {
     public native void setDataSource(long nativeHandle, String path);
 
     private native void prepare(long nativeHandle);
+
+    private native void start(long nativeHandle);
 }

@@ -45,3 +45,10 @@ Java_com_example_ffmpeg_EnjoyPlayer_prepare(JNIEnv *env, jobject thiz, jlong nat
     EnjoyPlayer *player = reinterpret_cast<EnjoyPlayer *>(nativeHandle);
     player->prepare();
 }
+
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_example_ffmpeg_EnjoyPlayer_start(JNIEnv *env, jobject thiz, jlong nativeHandle) {
+    EnjoyPlayer *player = reinterpret_cast<EnjoyPlayer *>(nativeHandle);
+    player->start();
+}

@@ -5,6 +5,7 @@
 #include "EnjoyPlayer.h"
 #include <cstring>
 #include <malloc.h>
+#include <pthread.h>
 #include "XLog.h"
 
 extern "C" {
@@ -48,7 +49,7 @@ void EnjoyPlayer::prepare() {
  * 线程真正执行的方法
  */
 void EnjoyPlayer::_prepare() {
-    AVFormatContext *avFormatContext = avformat_alloc_context();
+    avFormatContext = avformat_alloc_context();
     /**
      * 1.打开媒体文件
      */
@@ -109,11 +110,72 @@ void EnjoyPlayer::_prepare() {
 
         } else if (parameters->codec_type == AVMEDIA_TYPE_VIDEO) {
             //视频
-            int pfs = av_q2d(avStream->avg_frame_rate);
+            int fps = av_q2d(avStream->avg_frame_rate);
+            videoChannel = new VideoChannel(i, helper, avCodecContext, avStream->time_base, fps);
         } else {
 
         }
 
     }
 
+    //没有视频的情况
+    if (!videoChannel) {
+        LOGI("没有音视频");
+        helper->onError(NO_MEDIA, THREAD_CHILD);
+        return;
+    }
+
+    //准备完成回调给java层
+    helper->onPrepare(THREAD_CHILD);
+}
+
+/**
+ * start执行的方法
+ * @param args
+ * @return
+ */
+void *start_t(void *args) {
+    EnjoyPlayer *player = static_cast<EnjoyPlayer *>(args);
+    player->_start();
+    return 0;
+}
+
+/**
+ * 开始
+ */
+void EnjoyPlayer::start() {
+
+    isPlaying = 1;
+    if (videoChannel) {
+        videoChannel->play();
+    }
+
+    pthread_create(&startTask, 0, start_t, this);
+
+}
+
+void EnjoyPlayer::_start() {
+    int ret;
+    while (isPlaying) {
+        AVPacket *packet = av_packet_alloc();
+        ret = av_read_frame(avFormatContext, packet);
+        if (ret == 0) {
+            //没有数据了
+            if (videoChannel && packet->stream_index == videoChannel->channelId) {
+                videoChannel->pkt_queue.enQueue(packet);
+            }
+        } else if (ret == AVERROR_EOF) {
+            //读取完毕
+            if (videoChannel->pkt_queue.empty() && videoChannel->frame_queue.empty()) {
+                //播放完毕
+
+                return;
+            }
+
+        } else {
+
+        }
+    }
+    isPlaying = 0;
+    videoChannel->stop();
 }
