@@ -2,14 +2,15 @@
 // Created by Joker on 2020/9/16.
 //
 
-#include <opencl-c-base.h>
-#include <pthread.h>
-#include "JavaCallHelper.h"
 
 #ifndef FFMPEG_ENJOYPLAYER_H
 #define FFMPEG_ENJOYPLAYER_H
 
-#endif //FFMPEG_ENJOYPLAYER_H
+
+#include <android/native_window_jni.h>
+#include <sys/types.h>
+#include "JavaCallHelper.h"
+
 
 
 class EnjoyPlayer {
@@ -30,3 +31,4 @@ private:
 
     void _prepare();
 };
+#endif //FFMPEG_ENJOYPLAYER_H

@@ -23,5 +23,6 @@ include_directories(include)
 target_link_libraries(
         native-lib
         #armeabi-v7a 下的静态库引入
-        avcodec avfilter avformat avutil rtmp swresample swscale z
+        avfilter avformat  avcodec avutil swresample swscale rtmp android z
+        OpenSLES
         log)
